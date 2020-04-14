@@ -1,0 +1,11 @@
+[package]
+name = "raw-window-metal"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+authors = ["The Gfx-rs Developers"]
+edition = "2018"
+
+[dependencies]
+raw-window-handle = "0.3"
+objc = "0.2.5"
+cocoa = "0.20"
