@@ -15,8 +15,8 @@ pub unsafe fn metal_layer_from_handle(handle: IOSHandle) -> Layer {
 }
 
 ///
-pub unsafe fn metal_layer_from_ns_view(view: *mut c_void) -> Layer {
-    let view: cocoa::base::id = mem::transmute(uiview);
+pub unsafe fn metal_layer_from_ui_view(view: *mut c_void) -> Layer {
+    let view: cocoa::base::id = mem::transmute(view);
     let main_layer: CAMetalLayer = msg_send![view, layer];
 
     let class = class!(CAMetalLayer);
