@@ -2,7 +2,7 @@ use crate::{CAMetalLayer, Layer};
 use core_graphics::{base::CGFloat, geometry::CGRect};
 use objc::{msg_send, runtime::{Object, BOOL, YES}};
 use raw_window_handle::macos::MacOSHandle;
-use core::ffi::c_void;
+use core::{mem, ffi::c_void};
 
 ///
 pub unsafe fn metal_layer_from_handle(handle: MacOSHandle) -> Layer {
@@ -17,6 +17,8 @@ pub unsafe fn metal_layer_from_handle(handle: MacOSHandle) -> Layer {
 
 ///
 pub unsafe fn metal_layer_from_ns_view(view: *mut c_void) -> Layer {
+    let view: cocoa::base::id = mem::transmute(view);
+
     // Check if the view is a CAMetalLayer
     let class = class!(CAMetalLayer);
     let is_actually_layer: BOOL = msg_send![view, isKindOfClass: class];
@@ -57,7 +59,7 @@ pub unsafe fn metal_layer_from_ns_view(view: *mut c_void) -> Layer {
 }
 
 ///
-pub unsafe fn metal_layer_from_ns_window(window: *mut c_void) -> CAMetalLayer {
+pub unsafe fn metal_layer_from_ns_window(window: *mut c_void) -> Layer {
     let ns_window = window as *mut Object;
     let ns_view = msg_send![ns_window, contentView];
     metal_layer_from_ns_view(ns_view)
