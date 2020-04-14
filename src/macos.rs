@@ -35,7 +35,7 @@ pub unsafe fn metal_layer_from_ns_view(view: *mut c_void) -> Layer {
         result == YES
     };
 
-    let render_layer: CAMetalLayer = if use_current {
+    let render_layer = if use_current {
         Layer::Existing(existing)
     } else {
         // Allocate a new CAMetalLayer for the current view
