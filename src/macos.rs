@@ -1,6 +1,6 @@
 use crate::{CAMetalLayer, Layer};
 use core_graphics::{base::CGFloat, geometry::CGRect};
-use objc::{msg_send, runtime::{Object, BOOL, YES}, sel};
+use objc::{msg_send, runtime::{Object, BOOL, YES}};
 use raw_window_handle::macos::MacOSHandle;
 use core::{mem, ffi::c_void};
 
