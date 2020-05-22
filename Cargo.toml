@@ -4,6 +4,13 @@ version = "0.1.0"
 license = "MIT OR Apache-2.0"
 authors = ["The Gfx-rs Developers"]
 edition = "2018"
+description = "Interop library between Metal and raw-window-handle"
+documentation = "https://docs.rs/raw-window-metal"
+repository = "https://github.com/norse-rs/raw-window-metal"
+readme = "README.md"
+keywords = ["window", "metal", "graphics"]
+categories = ["game-engines", "graphics"]
+exclude = [".github/*"]
 
 [dependencies]
 raw-window-handle = "0.3"
