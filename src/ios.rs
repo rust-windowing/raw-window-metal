@@ -1,6 +1,6 @@
 use crate::{CAMetalLayer, Layer};
 use core_graphics::{base::CGFloat, geometry::CGRect};
-use objc::{msg_send, runtime::{BOOL, YES}};
+use objc::{msg_send, runtime::{Object, BOOL, YES}};
 use raw_window_handle::ios::IOSHandle;
 use std::{ffi::c_void, mem};
 
@@ -8,6 +8,8 @@ use std::{ffi::c_void, mem};
 pub unsafe fn metal_layer_from_handle(handle: IOSHandle) -> Layer {
     if !handle.ui_view.is_null() {
         metal_layer_from_ui_view(handle.ui_view)
+    } else if !handle.ui_window.is_null() {
+        metal_layer_from_ui_window(handle.ui_window)
     } else {
         // TODO: ui_window & ui_view_controller support
         Layer::None
@@ -45,4 +47,11 @@ pub unsafe fn metal_layer_from_ui_view(view: *mut c_void) -> Layer {
     }
 
     render_layer
+}
+
+///
+pub unsafe fn metal_layer_from_ui_window(window: *mut c_void) -> Layer {
+    let ui_window = window as *mut Object;
+    let ui_view = msg_send![ui_window, contentView];
+    metal_layer_from_ui_view(ui_view)
 }
