@@ -1,11 +1,14 @@
 use crate::{CAMetalLayer, Layer};
 use core_graphics::{base::CGFloat, geometry::CGRect};
-use objc::{msg_send, runtime::{Object, BOOL, YES}};
-use raw_window_handle::ios::IOSHandle;
+use objc::{
+    msg_send,
+    runtime::{Object, BOOL, YES},
+};
+use raw_window_handle::uikit::UiKitHandle;
 use std::{ffi::c_void, mem};
 
 ///
-pub unsafe fn metal_layer_from_handle(handle: IOSHandle) -> Layer {
+pub unsafe fn metal_layer_from_handle(handle: UiKitHandle) -> Layer {
     if !handle.ui_view.is_null() {
         metal_layer_from_ui_view(handle.ui_view)
     } else if !handle.ui_window.is_null() {

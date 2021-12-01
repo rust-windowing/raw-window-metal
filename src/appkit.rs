@@ -1,11 +1,14 @@
 use crate::{CAMetalLayer, Layer};
+use core::{ffi::c_void, mem};
 use core_graphics::{base::CGFloat, geometry::CGRect};
-use objc::{msg_send, runtime::{Object, BOOL, YES}};
-use raw_window_handle::macos::MacOSHandle;
-use core::{mem, ffi::c_void};
+use objc::{
+    msg_send,
+    runtime::{Object, BOOL, YES},
+};
+use raw_window_handle::appkit::AppKitHandle;
 
 ///
-pub unsafe fn metal_layer_from_handle(handle: MacOSHandle) -> Layer {
+pub unsafe fn metal_layer_from_handle(handle: AppKitHandle) -> Layer {
     if !handle.ns_view.is_null() {
         metal_layer_from_ns_view(handle.ns_view)
     } else if !handle.ns_window.is_null() {

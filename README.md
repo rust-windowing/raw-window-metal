@@ -1,9 +1,6 @@
 
 <h1 align="center">raw-window-metal</h1>
 <p align="center">
-    <a href="https://github.com/norse-rs">
-      <img src="https://img.shields.io/badge/project-norse-9cf.svg?style=flat-square" alt="NORSE">
-    </a>
     <a href="https://crates.io/crates/raw-window-metal">
       <img src="https://img.shields.io/crates/v/raw-window-metal?style=flat-square" alt = "crates.io">
     </a>
@@ -28,7 +25,7 @@
 Interoperability library for Metal and [`raw-window-handle`](https://github.com/rust-windowing/raw-window-handle) for surface creation.
 
 ```toml
-raw-window-metal = "0.1"
+raw-window-metal = "0.2"
 ```
 
 `CAMetalLayer` is the common entrypoint for graphics APIs (e.g `gfx` or `MoltenVK`), but the handles provided by window libraries may not include such a layer.
