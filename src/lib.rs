@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate objc;
+
 use objc::runtime::Object;
 
 #[cfg(target_os = "macos")]

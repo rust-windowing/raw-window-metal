@@ -5,7 +5,7 @@ use objc::{
     msg_send,
     runtime::{Object, BOOL, YES},
 };
-use raw_window_handle::appkit::AppKitHandle;
+use raw_window_handle::AppKitHandle;
 
 ///
 pub unsafe fn metal_layer_from_handle(handle: AppKitHandle) -> Layer {

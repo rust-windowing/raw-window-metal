@@ -4,7 +4,7 @@ use objc::{
     msg_send,
     runtime::{Object, BOOL, YES},
 };
-use raw_window_handle::uikit::UiKitHandle;
+use raw_window_handle::UiKitHandle;
 use std::{ffi::c_void, mem};
 
 ///
