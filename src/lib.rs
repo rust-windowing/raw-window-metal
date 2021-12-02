@@ -4,9 +4,9 @@ extern crate objc;
 use objc::runtime::Object;
 
 #[cfg(target_os = "macos")]
-pub mod macos;
+pub mod appkit;
 #[cfg(target_os = "ios")]
-pub mod ios;
+pub mod uikit;
 
 pub type CAMetalLayer = *mut Object;
 
