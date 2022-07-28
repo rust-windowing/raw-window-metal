@@ -5,10 +5,10 @@ use objc::{
     msg_send,
     runtime::{Object, BOOL, YES},
 };
-use raw_window_handle::AppKitHandle;
+use raw_window_handle::AppKitWindowHandle;
 
 ///
-pub unsafe fn metal_layer_from_handle(handle: AppKitHandle) -> Layer {
+pub unsafe fn metal_layer_from_handle(handle: AppKitWindowHandle) -> Layer {
     if !handle.ns_view.is_null() {
         metal_layer_from_ns_view(handle.ns_view)
     } else if !handle.ns_window.is_null() {

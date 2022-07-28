@@ -4,11 +4,11 @@ use objc::{
     msg_send,
     runtime::{Object, BOOL, YES},
 };
-use raw_window_handle::UiKitHandle;
+use raw_window_handle::UiKitWindowHandle;
 use std::{ffi::c_void, mem};
 
 ///
-pub unsafe fn metal_layer_from_handle(handle: UiKitHandle) -> Layer {
+pub unsafe fn metal_layer_from_handle(handle: UiKitWindowHandle) -> Layer {
     if !handle.ui_view.is_null() {
         metal_layer_from_ui_view(handle.ui_view)
     } else if !handle.ui_window.is_null() {
