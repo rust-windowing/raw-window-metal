@@ -19,3 +19,9 @@ objc = "0.2"
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
 cocoa = "0.24"
 core-graphics = "0.22"
+
+[package.metadata.docs.rs]
+targets = [
+    "x86_64-apple-darwin",
+    "aarch64-apple-ios",
+]
