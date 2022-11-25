@@ -1,5 +1,8 @@
 # Unreleased
 
+# 0.3.1 (2022-11-25)
+- Only build docs.rs for `darwin` and `ios`.
+
 # 0.3.0 (2022-07-28)
 - Update `raw-window-handle` dep to `0.5.0`.
 
