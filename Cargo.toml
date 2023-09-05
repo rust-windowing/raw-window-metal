@@ -14,14 +14,42 @@ exclude = [".github/*"]
 
 [dependencies]
 raw-window-handle = "0.6.0"
-objc = "0.2"
 
-[target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
-cocoa = "0.25"
-core-graphics = "0.23"
+[target.'cfg(target_vendor = "apple")'.dependencies]
+objc2 = "0.5.2"
+objc2-foundation = { version = "0.2.2", features = [
+    "NSObjCRuntime",
+    "NSGeometry",
+] }
+objc2-quartz-core = { version = "0.2.2", features = [
+    "CALayer",
+    "CAMetalLayer",
+    "objc2-metal",
+] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-app-kit = { version = "0.2.2", features = [
+    "NSResponder",
+    "NSView",
+    "NSWindow",
+    "objc2-quartz-core",
+] }
+
+[target.'cfg(all(target_vendor = "apple", not(target_os = "macos")))'.dependencies]
+objc2-ui-kit = { version = "0.2.2", features = [
+    "UIResponder",
+    "UIView",
+    "UIWindow",
+    "UIScreen",
+    "objc2-quartz-core",
+] }
 
 [package.metadata.docs.rs]
 targets = [
     "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
     "aarch64-apple-ios",
+    "aarch64-apple-ios-macabi",
+    "x86_64-apple-ios",
 ]
+rustdoc-args = ["--cfg", "docsrs"]

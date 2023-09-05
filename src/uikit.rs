@@ -1,9 +1,7 @@
-use crate::{CAMetalLayer, Layer};
-use core_graphics::{base::CGFloat, geometry::CGRect};
-use objc::{
-    msg_send,
-    runtime::{BOOL, YES},
-};
+use crate::Layer;
+use objc2::rc::Retained;
+use objc2_foundation::NSObjectProtocol;
+use objc2_quartz_core::CAMetalLayer;
 use raw_window_handle::UiKitWindowHandle;
 use std::{ffi::c_void, ptr::NonNull};
 
@@ -12,37 +10,45 @@ pub unsafe fn metal_layer_from_handle(handle: UiKitWindowHandle) -> Layer {
     if let Some(_ui_view_controller) = handle.ui_view_controller {
         // TODO: ui_view_controller support
     }
-    metal_layer_from_ui_view(handle.ui_view)
+    unsafe { metal_layer_from_ui_view(handle.ui_view) }
 }
 
 ///
 pub unsafe fn metal_layer_from_ui_view(view: NonNull<c_void>) -> Layer {
-    let view: cocoa::base::id = view.cast().as_ptr();
-    let main_layer: CAMetalLayer = msg_send![view, layer];
+    // SAFETY: Caller ensures that the view is a UIView
+    let view = unsafe { view.cast::<objc2_ui_kit::UIView>().as_ref() };
 
-    let class = class!(CAMetalLayer);
-    let is_valid_layer: BOOL = msg_send![main_layer, isKindOfClass: class];
-    let render_layer = if is_valid_layer == YES {
-        Layer::Existing(main_layer)
+    let main_layer = view.layer();
+
+    // Check if the view's layer is already a CAMetalLayer
+    let render_layer = if main_layer.is_kind_of::<CAMetalLayer>() {
+        // SAFETY: Just checked that the layer is a `CAMetalLayer`.
+        let layer = unsafe { Retained::cast::<CAMetalLayer>(main_layer) };
+        Layer {
+            layer,
+            pre_existing: true,
+        }
     } else {
-        // If the main layer is not a CAMetalLayer, we create a CAMetalLayer sublayer and use it instead.
-        // Unlike on macOS, we cannot replace the main view as UIView does not allow it (when NSView does).
-        let new_layer: CAMetalLayer = msg_send![class, new];
+        // If the main layer is not a CAMetalLayer, we create a CAMetalLayer
+        // sublayer and use it instead.
+        //
+        // Unlike on macOS, we cannot replace the main view as UIView does not
+        // allow it (when NSView does).
+        let layer = unsafe { CAMetalLayer::new() };
 
-        let bounds: CGRect = msg_send![main_layer, bounds];
-        let () = msg_send![new_layer, setFrame: bounds];
+        let bounds = main_layer.bounds();
+        layer.setFrame(bounds);
 
-        let () = msg_send![main_layer, addSublayer: new_layer];
-        Layer::Allocated(new_layer)
+        main_layer.addSublayer(&layer);
+
+        Layer {
+            layer,
+            pre_existing: false,
+        }
     };
 
-    let window: cocoa::base::id = msg_send![view, window];
-    if !window.is_null() {
-        let screen: cocoa::base::id = msg_send![window, screen];
-        assert!(!screen.is_null(), "window is not attached to a screen");
-
-        let scale_factor: CGFloat = msg_send![screen, nativeScale];
-        let () = msg_send![view, setContentScaleFactor: scale_factor];
+    if let Some(window) = view.window() {
+        view.setContentScaleFactor(window.screen().nativeScale());
     }
 
     render_layer
