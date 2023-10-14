@@ -1,26 +1,21 @@
 use crate::{CAMetalLayer, Layer};
-use core::{ffi::c_void, mem};
+use core::ffi::c_void;
 use core_graphics::{base::CGFloat, geometry::CGRect};
 use objc::{
     msg_send,
-    runtime::{Object, BOOL, YES},
+    runtime::{BOOL, YES},
 };
 use raw_window_handle::AppKitWindowHandle;
+use std::ptr::NonNull;
 
 ///
 pub unsafe fn metal_layer_from_handle(handle: AppKitWindowHandle) -> Layer {
-    if !handle.ns_view.is_null() {
-        metal_layer_from_ns_view(handle.ns_view)
-    } else if !handle.ns_window.is_null() {
-        metal_layer_from_ns_window(handle.ns_window)
-    } else {
-        Layer::None
-    }
+    metal_layer_from_ns_view(handle.ns_view)
 }
 
 ///
-pub unsafe fn metal_layer_from_ns_view(view: *mut c_void) -> Layer {
-    let view: cocoa::base::id = mem::transmute(view);
+pub unsafe fn metal_layer_from_ns_view(view: NonNull<c_void>) -> Layer {
+    let view: cocoa::base::id = view.cast().as_ptr();
 
     // Check if the view is a CAMetalLayer
     let class = class!(CAMetalLayer);
@@ -59,11 +54,4 @@ pub unsafe fn metal_layer_from_ns_view(view: *mut c_void) -> Layer {
 
     let _: *mut c_void = msg_send![view, retain];
     render_layer
-}
-
-///
-pub unsafe fn metal_layer_from_ns_window(window: *mut c_void) -> Layer {
-    let ns_window = window as *mut Object;
-    let ns_view = msg_send![ns_window, contentView];
-    metal_layer_from_ns_view(ns_view)
 }
