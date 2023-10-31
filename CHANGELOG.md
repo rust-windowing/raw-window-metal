@@ -1,5 +1,12 @@
 # Unreleased
 
+# 0.4.0 (2023-10-31)
+- Update `raw-window-handle` dep to `0.6.0`.
+- Remove `metal_layer_from_ns_window` and `metal_layer_from_ui_window`.
+
+# 0.3.2 (2023-10-31)
+- Bump version of `cocoa` and `core-graphics` dependencies.
+
 # 0.3.1 (2022-11-25)
 - Only build docs.rs for `darwin` and `ios`.
 
