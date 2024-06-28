@@ -18,7 +18,7 @@ pub unsafe fn metal_layer_from_ns_view(view: NonNull<c_void>) -> Layer {
     // SAFETY: Caller ensures that the view is valid.
     let obj = unsafe { view.cast::<NSObject>().as_ref() };
 
-    // Check if the view is a CAMetalLayer
+    // Check if the view is a `CAMetalLayer`.
     if obj.is_kind_of::<CAMetalLayer>() {
         // SAFETY: Just checked that the view is a `CAMetalLayer`.
         let layer = unsafe { view.cast::<CAMetalLayer>().as_ref() };
@@ -27,10 +27,10 @@ pub unsafe fn metal_layer_from_ns_view(view: NonNull<c_void>) -> Layer {
             pre_existing: true,
         };
     }
-    // Otherwise assume the view is `NSView`
+    // Otherwise assume the view is `NSView`.
     let view = unsafe { view.cast::<objc2_app_kit::NSView>().as_ref() };
 
-    // Check if the view contains a valid CAMetalLayer
+    // Check if the view contains a valid `CAMetalLayer`.
     let existing = unsafe { view.layer() };
     if let Some(existing) = existing {
         if existing.is_kind_of::<CAMetalLayer>() {
@@ -43,7 +43,7 @@ pub unsafe fn metal_layer_from_ns_view(view: NonNull<c_void>) -> Layer {
         }
     }
 
-    // If the layer was not `CAMetalLayer`, allocate a new one for the view
+    // If the layer was not `CAMetalLayer`, allocate a new one for the view.
     let layer = unsafe { CAMetalLayer::new() };
     unsafe { view.setLayer(Some(&layer)) };
     view.setWantsLayer(true);
