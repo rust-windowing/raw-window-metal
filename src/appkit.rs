@@ -8,12 +8,21 @@ use std::ptr::NonNull;
 
 use crate::Layer;
 
+/// Get or create a new [`Layer`] associated with the given
+/// [`AppKitWindowHandle`].
 ///
+/// # Safety
+///
+/// The handle must be valid.
 pub unsafe fn metal_layer_from_handle(handle: AppKitWindowHandle) -> Layer {
     unsafe { metal_layer_from_ns_view(handle.ns_view) }
 }
 
+/// Get or create a new [`Layer`] associated with the given `NSView`.
 ///
+/// # Safety
+///
+/// The view must be a valid instance of `NSView`.
 pub unsafe fn metal_layer_from_ns_view(view: NonNull<c_void>) -> Layer {
     // SAFETY: Caller ensures that the view is valid.
     let obj = unsafe { view.cast::<NSObject>().as_ref() };

@@ -5,7 +5,12 @@ use objc2_quartz_core::CAMetalLayer;
 use raw_window_handle::UiKitWindowHandle;
 use std::{ffi::c_void, ptr::NonNull};
 
+/// Get or create a new [`Layer`] associated with the given
+/// [`UiKitWindowHandle`].
 ///
+/// # Safety
+///
+/// The handle must be valid.
 pub unsafe fn metal_layer_from_handle(handle: UiKitWindowHandle) -> Layer {
     if let Some(_ui_view_controller) = handle.ui_view_controller {
         // TODO: ui_view_controller support
@@ -13,7 +18,11 @@ pub unsafe fn metal_layer_from_handle(handle: UiKitWindowHandle) -> Layer {
     unsafe { metal_layer_from_ui_view(handle.ui_view) }
 }
 
+/// Get or create a new [`Layer`] associated with the given `UIView`.
 ///
+/// # Safety
+///
+/// The view must be a valid instance of `UIView`.
 pub unsafe fn metal_layer_from_ui_view(view: NonNull<c_void>) -> Layer {
     // SAFETY: Caller ensures that the view is a `UIView`.
     let view = unsafe { view.cast::<objc2_ui_kit::UIView>().as_ref() };
