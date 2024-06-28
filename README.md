@@ -7,11 +7,11 @@
     <a href="https://docs.rs/raw-window-metal">
       <img src="https://docs.rs/raw-window-metal/badge.svg?style=flat-square" alt="docs">
     </a>
-    <a href="https://github.com/norse-rs/raw-window-metal/actions">
-      <img src="https://github.com/norse-rs/raw-window-metal/workflows/macos/badge.svg?style=flat" alt="ci - macos">
+    <a href="https://github.com/rust-windowing/raw-window-metal/actions">
+      <img src="https://github.com/rust-windowing/raw-window-metal/workflows/macos/badge.svg?style=flat" alt="ci - macos">
     </a>
-    <a href="https://github.com/norse-rs/raw-window-metal/actions">
-      <img src="https://github.com/norse-rs/raw-window-metal/workflows/ios/badge.svg?style=flat" alt="ci - ios">
+    <a href="https://github.com/rust-windowing/raw-window-metal/actions">
+      <img src="https://github.com/rust-windowing/raw-window-metal/workflows/ios/badge.svg?style=flat" alt="ci - ios">
     </a>
     <br>
     <a href="LICENSE-MIT">
