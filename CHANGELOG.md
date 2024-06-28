@@ -1,5 +1,8 @@
 # Unreleased
 - Bump Rust Edition from 2018 to 2021.
+- Make `Layer`'s implementation details private; it is now a struct with `as_ptr` and `is_existing` accessor methods.
+- Add support for tvOS, watchOS and visionOS.
+- Use `objc2` internally.
 
 # 0.4.0 (2023-10-31)
 - Update `raw-window-handle` dep to `0.6.0`.

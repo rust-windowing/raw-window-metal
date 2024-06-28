@@ -1,57 +1,70 @@
-use crate::{CAMetalLayer, Layer};
 use core::ffi::c_void;
-use core_graphics::{base::CGFloat, geometry::CGRect};
-use objc::{
-    msg_send,
-    runtime::{BOOL, YES},
-};
+use objc2::rc::Retained;
+use objc2::ClassType;
+use objc2_foundation::{NSObject, NSObjectProtocol};
+use objc2_quartz_core::CAMetalLayer;
 use raw_window_handle::AppKitWindowHandle;
 use std::ptr::NonNull;
 
+use crate::Layer;
+
+/// Get or create a new [`Layer`] associated with the given
+/// [`AppKitWindowHandle`].
 ///
+/// # Safety
+///
+/// The handle must be valid.
 pub unsafe fn metal_layer_from_handle(handle: AppKitWindowHandle) -> Layer {
-    metal_layer_from_ns_view(handle.ns_view)
+    unsafe { metal_layer_from_ns_view(handle.ns_view) }
 }
 
+/// Get or create a new [`Layer`] associated with the given `NSView`.
 ///
+/// # Safety
+///
+/// The view must be a valid instance of `NSView`.
 pub unsafe fn metal_layer_from_ns_view(view: NonNull<c_void>) -> Layer {
-    let view: cocoa::base::id = view.cast().as_ptr();
+    // SAFETY: Caller ensures that the view is valid.
+    let obj = unsafe { view.cast::<NSObject>().as_ref() };
 
-    // Check if the view is a CAMetalLayer
-    let class = class!(CAMetalLayer);
-    let is_actually_layer: BOOL = msg_send![view, isKindOfClass: class];
-    if is_actually_layer == YES {
-        return Layer::Existing(view);
+    // Check if the view is a `CAMetalLayer`.
+    if obj.is_kind_of::<CAMetalLayer>() {
+        // SAFETY: Just checked that the view is a `CAMetalLayer`.
+        let layer = unsafe { view.cast::<CAMetalLayer>().as_ref() };
+        return Layer {
+            layer: layer.retain(),
+            pre_existing: true,
+        };
+    }
+    // Otherwise assume the view is `NSView`.
+    let view = unsafe { view.cast::<objc2_app_kit::NSView>().as_ref() };
+
+    // Check if the view contains a valid `CAMetalLayer`.
+    let existing = unsafe { view.layer() };
+    if let Some(existing) = existing {
+        if existing.is_kind_of::<CAMetalLayer>() {
+            // SAFETY: Just checked that the layer is a `CAMetalLayer`.
+            let layer = unsafe { Retained::cast::<CAMetalLayer>(existing) };
+            return Layer {
+                layer,
+                pre_existing: true,
+            };
+        }
     }
 
-    // Check if the view contains a valid CAMetalLayer
-    let existing: CAMetalLayer = msg_send![view, layer];
-    let use_current = if existing.is_null() {
-        false
-    } else {
-        let result: BOOL = msg_send![existing, isKindOfClass: class];
-        result == YES
-    };
+    // If the layer was not `CAMetalLayer`, allocate a new one for the view.
+    let layer = unsafe { CAMetalLayer::new() };
+    unsafe { view.setLayer(Some(&layer)) };
+    view.setWantsLayer(true);
+    layer.setBounds(view.bounds());
 
-    let render_layer = if use_current {
-        Layer::Existing(existing)
-    } else {
-        // Allocate a new CAMetalLayer for the current view
-        let layer: CAMetalLayer = msg_send![class, new];
-        let () = msg_send![view, setLayer: layer];
-        let () = msg_send![view, setWantsLayer: YES];
-        let bounds: CGRect = msg_send![view, bounds];
-        let () = msg_send![layer, setBounds: bounds];
+    if let Some(window) = view.window() {
+        let scale_factor = window.backingScaleFactor();
+        layer.setContentsScale(scale_factor);
+    }
 
-        let window: cocoa::base::id = msg_send![view, window];
-        if !window.is_null() {
-            let scale_factor: CGFloat = msg_send![window, backingScaleFactor];
-            let () = msg_send![layer, setContentsScale: scale_factor];
-        }
-
-        Layer::Allocated(layer)
-    };
-
-    let _: *mut c_void = msg_send![view, retain];
-    render_layer
+    Layer {
+        layer,
+        pre_existing: false,
+    }
 }
