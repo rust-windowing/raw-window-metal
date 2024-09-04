@@ -26,7 +26,7 @@ pub struct Layer {
 impl PartialEq for Layer {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        self.layer == other.layer
+        self.layer.eq(&other.layer)
     }
 }
 
