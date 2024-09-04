@@ -152,8 +152,10 @@ impl UnwindSafe for Layer {}
 impl RefUnwindSafe for Layer {}
 
 impl Layer {
-    /// Get a pointer to the underlying [`CAMetalLayer`]. The pointer is valid for at least as long
-    /// as the [`Layer`] is valid, but can be extended by retaining it.
+    /// Get a pointer to the underlying [`CAMetalLayer`].
+    ///
+    /// The pointer is valid for at least as long as the [`Layer`] is valid, but can be extended by
+    /// retaining it.
     ///
     /// You should usually not change general `CALayer` properties like `bounds`, `contentsScale`
     /// and so on of this layer, but instead modify the layer that it was created from.
