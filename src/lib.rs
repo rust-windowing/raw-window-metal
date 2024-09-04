@@ -36,8 +36,9 @@
 //!     RawWindowHandle::UiKit(handle) => unsafe { Layer::from_ui_view(handle.ui_view) },
 //!     _ => panic!("unsupported handle"),
 //! };
-//! let layer: *mut CAMetalLayer = layer.as_ptr().cast();
-//! let layer = unsafe { Retained::retain(layer).unwrap() };
+//! let layer: *mut CAMetalLayer = layer.into_raw().cast();
+//! // SAFETY: The pointer is a valid `CAMetalLayer` with +1 retain count.
+//! let layer = unsafe { Retained::from_raw(layer).unwrap() };
 //!
 //! // Use `CAMetalLayer` here.
 //! ```
@@ -198,7 +199,6 @@ impl Layer {
     /// # Example
     ///
     /// ```no_run
-    /// use objc2::rc::Retained;
     /// use objc2_quartz_core::CAMetalLayer;
     /// use raw_window_metal::Layer;
     ///
@@ -207,7 +207,7 @@ impl Layer {
     ///
     /// let layer: *mut CAMetalLayer = layer.as_ptr().cast();
     /// // SAFETY: The pointer is a valid `CAMetalLayer`.
-    /// let layer = unsafe { Retained::retain(layer).unwrap() };
+    /// let layer: &CAMetalLayer = unsafe { &*layer };
     ///
     /// // Use the `CAMetalLayer` here.
     /// ```
@@ -215,6 +215,36 @@ impl Layer {
     pub fn as_ptr(&self) -> *mut c_void {
         let ptr: *const CAMetalLayer = Retained::as_ptr(&self.layer);
         ptr as *mut _
+    }
+
+    /// Consume the layer, and return a pointer with +1 retain count to the underlying
+    /// [`CAMetalLayer`].
+    ///
+    /// After calling this function, the caller is responsible for releasing the pointer, otherwise
+    /// the layer will be leaked.
+    ///
+    ///
+    /// # Example
+    ///
+    /// Convert a layer to a [`Retained`] `CAMetalLayer`.
+    ///
+    /// ```no_run
+    /// use objc2::rc::Retained;
+    /// use objc2_quartz_core::CAMetalLayer;
+    /// use raw_window_metal::Layer;
+    ///
+    /// let layer: Layer;
+    /// # layer = unimplemented!();
+    ///
+    /// let layer: *mut CAMetalLayer = layer.into_raw().cast();
+    /// // SAFETY: The pointer is a valid `CAMetalLayer` with +1 retain count.
+    /// let layer = unsafe { Retained::from_raw(layer).unwrap() };
+    ///
+    /// // Use the `CAMetalLayer` here.
+    /// ```
+    #[inline]
+    pub fn into_raw(self) -> *mut c_void {
+        Retained::into_raw(self.layer).cast()
     }
 
     /// If `raw-window-metal` created a new [`CAMetalLayer`] for you, this returns `false`.
