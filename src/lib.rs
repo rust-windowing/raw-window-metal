@@ -3,9 +3,11 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg, doc_cfg_hide), doc(cfg_hide(doc)))]
 #![deny(unsafe_op_in_unsafe_fn)]
 
+use core::ffi::c_void;
+use core::hash;
+use core::panic::{RefUnwindSafe, UnwindSafe};
 use objc2::rc::Retained;
 use objc2_quartz_core::CAMetalLayer;
-use std::ffi::c_void;
 
 #[cfg(any(target_os = "macos", doc))]
 pub mod appkit;
@@ -14,10 +16,42 @@ pub mod appkit;
 pub mod uikit;
 
 /// A wrapper around [`CAMetalLayer`].
+#[doc(alias = "CAMetalLayer")]
+#[derive(Debug, Clone)]
 pub struct Layer {
     layer: Retained<CAMetalLayer>,
     pre_existing: bool,
 }
+
+impl PartialEq for Layer {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.layer == other.layer
+    }
+}
+
+impl Eq for Layer {}
+
+impl hash::Hash for Layer {
+    #[inline]
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        self.layer.hash(state);
+    }
+}
+
+// SAFETY: `CAMetalLayer` is thread safe, like most things in Core Animation, see:
+// https://developer.apple.com/documentation/quartzcore/catransaction/1448267-lock?language=objc
+// https://stackoverflow.com/questions/76250226/how-to-render-content-of-calayer-on-a-background-thread
+//
+// TODO(madsmtm): Move this to `objc2-quartz-core`.
+unsafe impl Send for Layer {}
+unsafe impl Sync for Layer {}
+
+// Layer methods may panic, but that won't leave the layer in an invalid state.
+//
+// TODO(madsmtm): Move this to `objc2-quartz-core`.
+impl UnwindSafe for Layer {}
+impl RefUnwindSafe for Layer {}
 
 impl Layer {
     /// Get a pointer to the underlying [`CAMetalLayer`]. The pointer is valid
