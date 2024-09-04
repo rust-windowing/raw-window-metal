@@ -1,19 +1,117 @@
+//! # Interop between Metal and [`raw-window-handle`]
+//!
+//! Helpers for constructing a [`CAMetalLayer`] from a handle given by [`raw-window-handle`].
+//!
+//! See the [`Layer`] type for details.
+//!
+//!
+//! ## Example
+//!
+//! Create a layer from a window that implements [`HasWindowHandle`].
+//!
+//! ```
+//! use objc2::rc::Retained;
+//! use objc2_quartz_core::CAMetalLayer;
+//! use raw_window_handle::{RawWindowHandle, HasWindowHandle};
+//! use raw_window_metal::Layer;
+//! #
+//! # let mtm = objc2_foundation::MainThreadMarker::new().expect("doc tests to run on main thread");
+//! #
+//! # #[cfg(target_os = "macos")]
+//! # let view = unsafe { objc2_app_kit::NSView::new(mtm) };
+//! # #[cfg(target_os = "macos")]
+//! # let handle = RawWindowHandle::AppKit(raw_window_handle::AppKitWindowHandle::new(std::ptr::NonNull::from(&*view).cast()));
+//! #
+//! # #[cfg(not(target_os = "macos"))]
+//! # let view = unsafe { objc2_ui_kit::UIView::new(mtm) };
+//! # #[cfg(not(target_os = "macos"))]
+//! # let handle = RawWindowHandle::UiKit(raw_window_handle::UiKitWindowHandle::new(std::ptr::NonNull::from(&*view).cast()));
+//! # let window = unsafe { raw_window_handle::WindowHandle::borrow_raw(handle) };
+//!
+//! let layer = match window.window_handle().expect("handle available").as_raw() {
+//!     // SAFETY: The handle is a valid `NSView` because it came from `WindowHandle<'_>`.
+//!     RawWindowHandle::AppKit(handle) => unsafe { Layer::from_ns_view(handle.ns_view) },
+//!     // SAFETY: The handle is a valid `UIView` because it came from `WindowHandle<'_>`.
+//!     RawWindowHandle::UiKit(handle) => unsafe { Layer::from_ui_view(handle.ui_view) },
+//!     _ => panic!("unsupported handle"),
+//! };
+//! let layer: *mut CAMetalLayer = layer.as_ptr().cast();
+//! let layer = unsafe { Retained::retain(layer).unwrap() };
+//!
+//! // Use `CAMetalLayer` here.
+//! ```
+//!
+//! [`raw-window-handle`]: https://crates.io/crates/raw-window-handle
+//! [`HasWindowHandle`]: https://docs.rs/raw-window-handle/0.6.2/raw_window_handle/trait.HasWindowHandle.html
+//!
+//!
+//! ## Reasoning behind creating a sublayer
+//!
+//! If a view does not have a `CAMetalLayer` as the root layer (as is the default for most views),
+//! then we're in a bit of a tricky position! We cannot use the existing layer with Metal, so we
+//! must do something else. There are a few options:
+//!
+//! 1. Panic, and require the user to pass a view with a `CAMetalLayer` layer.
+//!
+//!    While this would "work", it doesn't solve the problem, and instead passes the ball onwards to
+//!    the user and ecosystem to figure it out.
+//!
+//! 2. Override the existing layer with a newly created layer.
+//!
+//!    If we overlook that this does not work in UIKit since `UIView`'s `layer` is `readonly`, and
+//!    that as such we will need to do something different there anyhow, this is actually a fairly
+//!    good solution, and was what the original implementation did.
+//!
+//!    It has some problems though, due to:
+//!
+//!    a. Consumers of `raw-window-metal` like Wgpu and Ash in their API design choosing not to
+//!       register a callback with `-[CALayerDelegate displayLayer:]`, but instead leaves it up to
+//!       the user to figure out when to redraw. That is, they rely on other libraries' callbacks
+//!       telling us when to render.
+//!
+//!       (If you were to make an API only for Metal, you would probably make the user provide a
+//!       `render` closure that'd be called in the right situations).
+//!
+//!    b. Overwriting the `layer` on `NSView` makes the view "layer-hosting", see [wantsLayer],
+//!       which disables drawing functionality on the view like `drawRect:`/`updateLayer`.
+//!
+//!    These two in combination makes it basically impossible for crates like Winit to provide a
+//!    robust rendering callback that integrates with the system's built-in mechanisms for
+//!    redrawing, exactly because overwriting the layer would be disabling those mechanisms!
+//!
+//!    [wantsLayer]: https://developer.apple.com/documentation/appkit/nsview/1483695-wantslayer?language=objc
+//!
+//! 3. Create a sublayer.
+//!
+//!    `CALayer` has the concept of "sublayers", which we can use instead of overriding the layer.
+//!
+//!    This is also the recommended solution on UIKit, so it's nice that we can use the same
+//!    implementation regardless of operating system.
+//!
+//!    It _might_, however, perform ever so slightly worse than overriding the layer directly.
+//!
+//! 4. Create a new `MTKView` (or a custom view), and add it as a subview.
+//!
+//!    Similar to creating a sublayer (see above), but also provides a bunch of event handling that
+//!    we don't need.
+//!
+//! Option 3 seems like the most robust solution, so this is what this crate does.
+
 #![cfg(target_vendor = "apple")]
-#![allow(clippy::missing_safety_doc)]
 #![cfg_attr(docsrs, feature(doc_auto_cfg, doc_cfg_hide), doc(cfg_hide(doc)))]
 #![deny(unsafe_op_in_unsafe_fn)]
 
+mod observer;
+
+use crate::observer::ObserverLayer;
 use core::ffi::c_void;
 use core::hash;
 use core::panic::{RefUnwindSafe, UnwindSafe};
-use objc2::rc::Retained;
-use objc2_quartz_core::CAMetalLayer;
-
-#[cfg(any(target_os = "macos", doc))]
-pub mod appkit;
-
-#[cfg(any(not(target_os = "macos"), doc))]
-pub mod uikit;
+use core::ptr::NonNull;
+use objc2::{msg_send, rc::Retained};
+use objc2::{msg_send_id, ClassType};
+use objc2_foundation::{MainThreadMarker, NSObject, NSObjectProtocol};
+use objc2_quartz_core::{CALayer, CAMetalLayer};
 
 /// A wrapper around [`CAMetalLayer`].
 #[doc(alias = "CAMetalLayer")]
@@ -54,9 +152,15 @@ impl UnwindSafe for Layer {}
 impl RefUnwindSafe for Layer {}
 
 impl Layer {
-    /// Get a pointer to the underlying [`CAMetalLayer`]. The pointer is valid
-    /// for at least as long as the [`Layer`] is valid, but can be extended by
-    /// retaining it.
+    /// Get a pointer to the underlying [`CAMetalLayer`]. The pointer is valid for at least as long
+    /// as the [`Layer`] is valid, but can be extended by retaining it.
+    ///
+    /// You should usually not change general `CALayer` properties like `bounds`, `contentsScale`
+    /// and so on of this layer, but instead modify the layer that it was created from.
+    ///
+    /// You can safely modify `CAMetalLayer` properties like `drawableSize` to match your needs,
+    /// though beware that if it does not match the actual size of the layer, the contents will be
+    /// scaled.
     ///
     ///
     /// # Example
@@ -85,5 +189,195 @@ impl Layer {
     #[inline]
     pub fn pre_existing(&self) -> bool {
         self.pre_existing
+    }
+
+    /// Get or create a new `CAMetalLayer` from the given `CALayer`.
+    ///
+    /// If the given layer is a `CAMetalLayer`, this will simply return that layer. If not, a new
+    /// `CAMetalLayer` is created and inserted as a sublayer, and then configured such that it will
+    /// have the same bounds and scale factor as the given layer.
+    ///
+    ///
+    /// # Safety
+    ///
+    /// The given layer pointer must be a valid instance of `CALayer`.
+    ///
+    ///
+    /// # Examples
+    ///
+    /// Create a new layer from a `CAMetalLayer`.
+    ///
+    /// ```
+    /// use std::ptr::NonNull;
+    /// use objc2_quartz_core::CAMetalLayer;
+    /// use raw_window_metal::Layer;
+    ///
+    /// let layer = unsafe { CAMetalLayer::new() };
+    /// let ptr: NonNull<CAMetalLayer> = NonNull::from(&*layer);
+    ///
+    /// let layer = unsafe { Layer::from_layer(ptr.cast()) };
+    /// assert!(layer.pre_existing());
+    /// ```
+    ///
+    /// Create a `CAMetalLayer` sublayer in a `CALayer`.
+    ///
+    /// ```
+    /// use std::ptr::NonNull;
+    /// use objc2_quartz_core::CALayer;
+    /// use raw_window_metal::Layer;
+    ///
+    /// let layer = CALayer::new();
+    /// let ptr: NonNull<CALayer> = NonNull::from(&*layer);
+    ///
+    /// let layer = unsafe { Layer::from_layer(ptr.cast()) };
+    /// assert!(!layer.pre_existing());
+    /// ```
+    pub unsafe fn from_layer(layer_ptr: NonNull<c_void>) -> Self {
+        // SAFETY: Caller ensures that the pointer is a valid `CALayer`.
+        let root_layer: &CALayer = unsafe { layer_ptr.cast().as_ref() };
+
+        // Check if the view's layer is already a `CAMetalLayer`.
+        if root_layer.is_kind_of::<CAMetalLayer>() {
+            let layer = root_layer.retain();
+            // SAFETY: Just checked that the layer is a `CAMetalLayer`.
+            let layer: Retained<CAMetalLayer> = unsafe { Retained::cast(layer) };
+            Layer {
+                layer,
+                pre_existing: true,
+            }
+        } else {
+            let layer = ObserverLayer::new(&root_layer);
+            Layer {
+                layer: Retained::into_super(layer),
+                pre_existing: false,
+            }
+        }
+    }
+
+    fn from_retained_layer(root_layer: Retained<CALayer>) -> Self {
+        // Check if the view's layer is already a `CAMetalLayer`.
+        if root_layer.is_kind_of::<CAMetalLayer>() {
+            // SAFETY: Just checked that the layer is a `CAMetalLayer`.
+            let layer: Retained<CAMetalLayer> = unsafe { Retained::cast(root_layer) };
+            Layer {
+                layer,
+                pre_existing: true,
+            }
+        } else {
+            let layer = ObserverLayer::new(&root_layer);
+            Layer {
+                layer: Retained::into_super(layer),
+                pre_existing: false,
+            }
+        }
+    }
+
+    /// Get or create a new `CAMetalLayer` from the given `NSView`.
+    ///
+    /// If the given view is not [layer-backed], it will be made so.
+    ///
+    /// If the given view has a `CAMetalLayer` as the root layer (which can happen for example if
+    /// the view has overwritten `-[NSView layerClass]` or the view is `MTKView`) this will simply
+    /// return that layer. If not, a new `CAMetalLayer` is created and inserted as a sublayer into
+    /// the view's layer, and then configured such that it will have the same bounds and scale
+    /// factor as the given view.
+    ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if called from a thread that is not the main thread.
+    ///
+    ///
+    /// # Safety
+    ///
+    /// The given view pointer must be a valid instance of `NSView`.
+    ///
+    ///
+    /// # Example
+    ///
+    /// Construct a layer from an [`AppKitWindowHandle`].
+    ///
+    /// ```
+    /// use raw_window_handle::AppKitWindowHandle;
+    /// use raw_window_metal::Layer;
+    ///
+    /// let handle: AppKitWindowHandle;
+    /// # let mtm = objc2_foundation::MainThreadMarker::new().expect("doc tests to run on main thread");
+    /// # #[cfg(target_os = "macos")]
+    /// # let view = unsafe { objc2_app_kit::NSView::new(mtm) };
+    /// # #[cfg(target_os = "macos")]
+    /// # { handle = AppKitWindowHandle::new(std::ptr::NonNull::from(&*view).cast()) };
+    /// # #[cfg(not(target_os = "macos"))]
+    /// # { handle = unimplemented!() };
+    /// let layer = unsafe { Layer::from_ns_view(handle.ns_view) };
+    /// ```
+    ///
+    /// [layer-backed]: https://developer.apple.com/documentation/appkit/nsview/1483695-wantslayer?language=objc
+    /// [`AppKitWindowHandle`]: https://docs.rs/raw-window-handle/0.6.2/raw_window_handle/struct.AppKitWindowHandle.html
+    pub unsafe fn from_ns_view(ns_view_ptr: NonNull<c_void>) -> Self {
+        // let _mtm = MainThreadMarker::new().expect("can only access NSView on the main thread");
+
+        // SAFETY: Caller ensures that the pointer is a valid `NSView`.
+        //
+        // We use `NSObject` here to avoid importing `objc2-app-kit`.
+        let ns_view: &NSObject = unsafe { ns_view_ptr.cast().as_ref() };
+
+        // Force the view to become layer backed
+        let _: () = unsafe { msg_send![ns_view, setWantsLayer: true] };
+
+        // SAFETY: `-[NSView layer]` returns an optional `CALayer`
+        let root_layer: Option<Retained<CALayer>> = unsafe { msg_send_id![ns_view, layer] };
+        let root_layer = root_layer.expect("failed making the view layer-backed");
+
+        Self::from_retained_layer(root_layer)
+    }
+
+    /// Get or create a new `CAMetalLayer` from the given `UIView`.
+    ///
+    /// If the given view has a `CAMetalLayer` as the root layer (which can happen for example if
+    /// the view has overwritten `-[UIView layerClass]` or the view is `MTKView`) this will simply
+    /// return that layer. If not, a new `CAMetalLayer` is created and inserted as a sublayer into
+    /// the view's layer, and then configured such that it will have the same bounds and scale
+    /// factor as the given view.
+    ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if called from a thread that is not the main thread.
+    ///
+    ///
+    /// # Safety
+    ///
+    /// The given view pointer must be a valid instance of `UIView`.
+    ///
+    ///
+    /// # Example
+    ///
+    /// Construct a layer from a [`UiKitWindowHandle`].
+    ///
+    /// ```no_run
+    /// use raw_window_handle::UiKitWindowHandle;
+    /// use raw_window_metal::Layer;
+    ///
+    /// let handle: UiKitWindowHandle;
+    /// # handle = unimplemented!();
+    /// let layer = unsafe { Layer::from_ui_view(handle.ui_view) };
+    /// ```
+    ///
+    /// [`UiKitWindowHandle`]: https://docs.rs/raw-window-handle/0.6.2/raw_window_handle/struct.UiKitWindowHandle.html
+    pub unsafe fn from_ui_view(ui_view_ptr: NonNull<c_void>) -> Self {
+        let _mtm = MainThreadMarker::new().expect("can only access UIView on the main thread");
+
+        // SAFETY: Caller ensures that the pointer is a valid `UIView`.
+        //
+        // We use `NSObject` here to avoid importing `objc2-ui-kit`.
+        let ui_view: &NSObject = unsafe { ui_view_ptr.cast().as_ref() };
+
+        // SAFETY: `-[UIView layer]` returns a non-optional `CALayer`
+        let root_layer: Retained<CALayer> = unsafe { msg_send_id![ui_view, layer] };
+
+        // Unlike on macOS, we cannot replace the main view as `UIView` does
+        // not allow it (when `NSView` does).
+        Self::from_retained_layer(root_layer)
     }
 }

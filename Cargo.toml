@@ -2,7 +2,6 @@
 name = "raw-window-metal"
 version = "0.4.0"
 license = "MIT OR Apache-2.0"
-authors = ["The Gfx-rs Developers"]
 edition = "2021"
 description = "Interop library between Metal and raw-window-handle"
 documentation = "https://docs.rs/raw-window-metal"
@@ -12,14 +11,16 @@ keywords = ["window", "metal", "graphics"]
 categories = ["game-engines", "graphics"]
 exclude = [".github/*"]
 
-[dependencies]
-raw-window-handle = "0.6.0"
-
 [target.'cfg(target_vendor = "apple")'.dependencies]
 objc2 = "0.5.2"
 objc2-foundation = { version = "0.2.2", features = [
-    "NSObjCRuntime",
+    "NSDictionary",
     "NSGeometry",
+    "NSKeyValueObserving",
+    "NSObjCRuntime",
+    "NSString",
+    "NSThread",
+    "NSValue",
 ] }
 objc2-quartz-core = { version = "0.2.2", features = [
     "CALayer",
@@ -27,22 +28,14 @@ objc2-quartz-core = { version = "0.2.2", features = [
     "objc2-metal",
 ] }
 
-[target.'cfg(target_os = "macos")'.dependencies]
-objc2-app-kit = { version = "0.2.2", features = [
-    "NSResponder",
-    "NSView",
-    "NSWindow",
-    "objc2-quartz-core",
-] }
+[dev-dependencies]
+raw-window-handle = "0.6.0"
 
-[target.'cfg(all(target_vendor = "apple", not(target_os = "macos")))'.dependencies]
-objc2-ui-kit = { version = "0.2.2", features = [
-    "UIResponder",
-    "UIView",
-    "UIWindow",
-    "UIScreen",
-    "objc2-quartz-core",
-] }
+[target.'cfg(target_os = "macos")'.dev-dependencies]
+objc2-app-kit = { version = "0.2.2", features = ["NSResponder", "NSView"] }
+
+[target.'cfg(all(target_vendor = "apple", not(target_os = "macos")))'.dev-dependencies]
+objc2-ui-kit = { version = "0.2.2", features = ["UIResponder", "UIView"] }
 
 [package.metadata.docs.rs]
 targets = [
