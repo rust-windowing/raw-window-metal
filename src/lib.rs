@@ -81,7 +81,14 @@ impl Layer {
         ptr as *mut _
     }
 
-    /// Whether `raw-window-metal` created a new [`CAMetalLayer`] for you.
+    /// If `raw-window-metal` created a new [`CAMetalLayer`] for you, this returns `false`.
+    ///
+    /// This may be useful if you want to override some part of `raw-window-metal`'s behaviour, and
+    /// need to do so based on whether it ended up creating a layer or not.
+    ///
+    /// You should try to avoid this, and instead:
+    /// - Modify `CALayer` properties on the layer that you created this from.
+    /// - Modify `CAMetalLayer` properties on the layer returned from `as_ptr`.
     #[inline]
     pub fn pre_existing(&self) -> bool {
         self.pre_existing
