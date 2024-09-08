@@ -248,7 +248,7 @@ impl Layer {
                 pre_existing: true,
             }
         } else {
-            let layer = ObserverLayer::new(&root_layer);
+            let layer = ObserverLayer::new(root_layer);
             Layer {
                 layer: Retained::into_super(layer),
                 pre_existing: false,
