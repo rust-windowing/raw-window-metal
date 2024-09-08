@@ -109,6 +109,7 @@ use core::ffi::c_void;
 use core::hash;
 use core::panic::{RefUnwindSafe, UnwindSafe};
 use core::ptr::NonNull;
+use objc2::runtime::AnyClass;
 use objc2::{msg_send, rc::Retained};
 use objc2::{msg_send_id, ClassType};
 use objc2_foundation::{MainThreadMarker, NSObject, NSObjectProtocol};
@@ -240,6 +241,14 @@ impl Layer {
         // SAFETY: Caller ensures that the pointer is a valid `CALayer`.
         let root_layer: &CALayer = unsafe { layer_ptr.cast().as_ref() };
 
+        // Debug check that the given layer actually _is_ a CALayer.
+        if cfg!(debug_assertions) {
+            assert!(
+                root_layer.isKindOfClass(CALayer::class()),
+                "view was not a valid CALayer"
+            );
+        }
+
         // Check if the view's layer is already a `CAMetalLayer`.
         if root_layer.is_kind_of::<CAMetalLayer>() {
             let layer = root_layer.retain();
@@ -326,6 +335,14 @@ impl Layer {
         // We use `NSObject` here to avoid importing `objc2-app-kit`.
         let ns_view: &NSObject = unsafe { ns_view_ptr.cast().as_ref() };
 
+        // Debug check that the given view actually _is_ a NSView.
+        if cfg!(debug_assertions) {
+            // Load the class at runtime (instead of using `class!`)
+            // to ensure that this still works if AppKit isn't linked.
+            let cls = AnyClass::get("NSView").unwrap();
+            assert!(ns_view.isKindOfClass(cls), "view was not a valid NSView");
+        }
+
         // Force the view to become layer backed
         // SAFETY: The signature of `NSView::setWantsLayer` is correctly specified, and
         let _: () = unsafe { msg_send![ns_view, setWantsLayer: true] };
@@ -377,6 +394,14 @@ impl Layer {
         //
         // We use `NSObject` here to avoid importing `objc2-ui-kit`.
         let ui_view: &NSObject = unsafe { ui_view_ptr.cast().as_ref() };
+
+        // Debug check that the given view actually _is_ a UIView.
+        if cfg!(debug_assertions) {
+            // Load the class at runtime (instead of using `class!`)
+            // to ensure that this still works if UIKit isn't linked.
+            let cls = AnyClass::get("UIView").unwrap();
+            assert!(ui_view.isKindOfClass(cls), "view was not a valid UIView");
+        }
 
         // SAFETY: `-[UIView layer]` returns a non-optional `CALayer`
         let root_layer: Retained<CALayer> = unsafe { msg_send_id![ui_view, layer] };
