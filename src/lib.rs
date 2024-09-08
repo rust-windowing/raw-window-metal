@@ -317,7 +317,7 @@ impl Layer {
     /// [layer-backed]: https://developer.apple.com/documentation/appkit/nsview/1483695-wantslayer?language=objc
     /// [`AppKitWindowHandle`]: https://docs.rs/raw-window-handle/0.6.2/raw_window_handle/struct.AppKitWindowHandle.html
     pub unsafe fn from_ns_view(ns_view_ptr: NonNull<c_void>) -> Self {
-        // let _mtm = MainThreadMarker::new().expect("can only access NSView on the main thread");
+        let _mtm = MainThreadMarker::new().expect("can only access NSView on the main thread");
 
         // SAFETY: Caller ensures that the pointer is a valid `NSView`.
         //
