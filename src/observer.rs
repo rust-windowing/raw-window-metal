@@ -59,6 +59,7 @@ impl Drop for ObserverLayer {
         // We use a weak variable here to avoid issues if the layer was removed from the super
         // layer, and then later de-allocated, without de-registering these observers.
         if let Some(root_layer) = self.ivars().load() {
+            // SAFETY: The observer is registered for these key paths in `new`.
             unsafe {
                 root_layer.removeObserver_forKeyPath(self, ns_string!("contentsScale"));
                 root_layer.removeObserver_forKeyPath(self, ns_string!("bounds"));
@@ -76,6 +77,7 @@ impl ObserverLayer {
     /// Create a new custom layer that tracks parameters from the given super layer.
     pub fn new(root_layer: &CALayer) -> Retained<Self> {
         let this = Self::alloc().set_ivars(Weak::new(root_layer));
+        // SAFETY: Initializing `CAMetalLayer` is safe.
         let this: Retained<Self> = unsafe { msg_send_id![super(this), init] };
 
         // Add the layer as a sublayer of the root layer.
@@ -143,6 +145,8 @@ impl ObserverLayer {
     ) {
         // An unrecognized context must belong to the super class.
         if context != ObserverLayer::context() {
+            // SAFETY: The signature is correct, and it's safe to forward to the superclass' method
+            // when we're overriding the method.
             return unsafe {
                 msg_send![
                     super(self),
@@ -156,8 +160,10 @@ impl ObserverLayer {
 
         let change =
             change.expect("requested a change dictionary in `addObserver`, but none was provided");
+        // SAFETY: The static is declared with the correct type in `objc2`.
+        let key = unsafe { NSKeyValueChangeNewKey };
         let new = change
-            .get(unsafe { NSKeyValueChangeNewKey })
+            .get(key)
             .expect("requested change dictionary did not contain `NSKeyValueChangeNewKey`");
 
         // NOTE: Setting these values usually causes a quarter second animation to occur, which is
@@ -167,6 +173,7 @@ impl ObserverLayer {
         // ongoing, and as such we don't need to wrap this in a `CATransaction` ourselves.
 
         if key_path == Some(ns_string!("contentsScale")) {
+            // SAFETY: `contentsScale` is a CGFloat, and so the observed value is always a NSNumber.
             let new = unsafe { &*(new as *const AnyObject as *const NSNumber) };
             let scale_factor = new.as_cgfloat();
 
@@ -174,6 +181,7 @@ impl ObserverLayer {
             // moved to a different monitor, or monitor settings changed).
             self.setContentsScale(scale_factor);
         } else if key_path == Some(ns_string!("bounds")) {
+            // SAFETY: `bounds` is a CGRect, and so the observed value is always a NSValue.
             let new = unsafe { &*(new as *const AnyObject as *const NSValue) };
             let bounds = new.get_rect().expect("new bounds value was not CGRect");
 

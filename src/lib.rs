@@ -100,6 +100,7 @@
 #![cfg(target_vendor = "apple")]
 #![cfg_attr(docsrs, feature(doc_auto_cfg, doc_cfg_hide), doc(cfg_hide(doc)))]
 #![deny(unsafe_op_in_unsafe_fn)]
+#![warn(clippy::undocumented_unsafe_blocks)]
 
 mod observer;
 
@@ -143,6 +144,7 @@ impl hash::Hash for Layer {
 //
 // TODO(madsmtm): Move this to `objc2-quartz-core`.
 unsafe impl Send for Layer {}
+// SAFETY: Same as above.
 unsafe impl Sync for Layer {}
 
 // Layer methods may panic, but that won't leave the layer in an invalid state.
@@ -325,6 +327,7 @@ impl Layer {
         let ns_view: &NSObject = unsafe { ns_view_ptr.cast().as_ref() };
 
         // Force the view to become layer backed
+        // SAFETY: The signature of `NSView::setWantsLayer` is correctly specified, and
         let _: () = unsafe { msg_send![ns_view, setWantsLayer: true] };
 
         // SAFETY: `-[NSView layer]` returns an optional `CALayer`
