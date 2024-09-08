@@ -69,7 +69,8 @@ impl Drop for ObserverLayer {
 }
 
 impl ObserverLayer {
-    /// The context pointer, to differentiate between
+    /// The context pointer, to differentiate between key-value observing registered by this class,
+    /// and the superclass.
     fn context() -> *mut c_void {
         ObserverLayer::class() as *const AnyClass as *mut c_void
     }
