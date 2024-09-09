@@ -11,6 +11,11 @@ keywords = ["window", "metal", "graphics"]
 categories = ["game-engines", "graphics"]
 exclude = [".github/*"]
 
+[features]
+default = ["std"]
+std = ["alloc"]
+alloc = []
+
 [target.'cfg(target_vendor = "apple")'.dependencies]
 objc2 = "0.5.2"
 objc2-foundation = { version = "0.2.2", features = [

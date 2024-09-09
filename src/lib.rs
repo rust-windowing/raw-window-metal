@@ -124,6 +124,7 @@
 //! do not modify common `CALayer` properties of the layer that `raw-window-metal` creates, since
 //! they may just end up being overwritten (see also "Semantics" above).
 
+#![no_std]
 #![cfg(target_vendor = "apple")]
 #![cfg_attr(docsrs, feature(doc_auto_cfg, doc_cfg_hide), doc(cfg_hide(doc)))]
 #![deny(unsafe_op_in_unsafe_fn)]
@@ -141,6 +142,12 @@ use objc2::{msg_send, rc::Retained};
 use objc2::{msg_send_id, ClassType};
 use objc2_foundation::{MainThreadMarker, NSObject, NSObjectProtocol};
 use objc2_quartz_core::{CALayer, CAMetalLayer};
+
+#[cfg(not(feature = "alloc"))]
+compile_error!("The `alloc` feature must currently be enabled.");
+
+#[cfg(not(feature = "std"))]
+compile_error!("The `std` feature must currently be enabled.");
 
 /// A wrapper around [`CAMetalLayer`].
 #[doc(alias = "CAMetalLayer")]
