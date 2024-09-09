@@ -1,5 +1,6 @@
 [package]
 name = "raw-window-metal"
+# Remember to update html_root_url in lib.rs
 version = "0.4.0"
 license = "MIT OR Apache-2.0"
 edition = "2021"
