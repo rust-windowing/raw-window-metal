@@ -36,8 +36,9 @@
 //!     RawWindowHandle::UiKit(handle) => unsafe { Layer::from_ui_view(handle.ui_view) },
 //!     _ => panic!("unsupported handle"),
 //! };
-//! let layer: *mut CAMetalLayer = layer.into_raw().cast();
-//! // SAFETY: The pointer is a valid `CAMetalLayer` with +1 retain count.
+//! let layer: *mut CAMetalLayer = layer.into_raw().as_ptr().cast();
+//! // SAFETY: The pointer is a valid `CAMetalLayer`, and because we consumed `Layer` with
+//! // `into_raw`, the pointer has +1 retain count.
 //! let layer = unsafe { Retained::from_raw(layer).unwrap() };
 //!
 //! // Use `CAMetalLayer` here.
@@ -212,16 +213,16 @@ impl Layer {
     /// let layer: Layer;
     /// # layer = unimplemented!();
     ///
-    /// let layer: *mut CAMetalLayer = layer.as_ptr().cast();
     /// // SAFETY: The pointer is a valid `CAMetalLayer`.
-    /// let layer: &CAMetalLayer = unsafe { &*layer };
+    /// let layer: &CAMetalLayer = unsafe { layer.as_ptr().cast().as_ref() };
     ///
     /// // Use the `CAMetalLayer` here.
     /// ```
     #[inline]
-    pub fn as_ptr(&self) -> *mut c_void {
+    pub fn as_ptr(&self) -> NonNull<c_void> {
         let ptr: *const CAMetalLayer = Retained::as_ptr(&self.layer);
-        ptr as *mut _
+        // Unwrap is fine, `Retained` stores a non-null pointer
+        NonNull::new(ptr as *mut _).unwrap()
     }
 
     /// Consume the layer, and return a pointer with +1 retain count to the underlying
@@ -243,15 +244,17 @@ impl Layer {
     /// let layer: Layer;
     /// # layer = unimplemented!();
     ///
-    /// let layer: *mut CAMetalLayer = layer.into_raw().cast();
-    /// // SAFETY: The pointer is a valid `CAMetalLayer` with +1 retain count.
+    /// let layer: *mut CAMetalLayer = layer.into_raw().as_ptr().cast();
+    /// // SAFETY: The pointer is a valid `CAMetalLayer`, and because we consumed `Layer` with
+    /// // `into_raw`, the pointer has +1 retain count.
     /// let layer = unsafe { Retained::from_raw(layer).unwrap() };
     ///
     /// // Use the `CAMetalLayer` here.
     /// ```
     #[inline]
-    pub fn into_raw(self) -> *mut c_void {
-        Retained::into_raw(self.layer).cast()
+    pub fn into_raw(self) -> NonNull<c_void> {
+        // Unwrap is fine, `Retained` stores a non-null pointer
+        NonNull::new(Retained::into_raw(self.layer).cast()).unwrap()
     }
 
     /// If `raw-window-metal` created a new [`CAMetalLayer`] for you, this returns `false`.
