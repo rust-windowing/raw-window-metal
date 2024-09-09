@@ -9,6 +9,9 @@
 - Move `Layer` constructors to the type itself.
   - `appkit::metal_layer_from_ns_view` is now `Layer::from_ns_view`.
   - `uikit::metal_layer_from_ui_view` is now `Layer::from_ui_view`.
+
+  `raw-window-handle` types are also no longer exposed directly in the API.
+  This allows us to decouple the library from `raw-window-handle`'s versioning.
 - Added `Layer::from_layer` to construct a `Layer` from a `CALayer` directly.
 - Fixed layers not automatically resizing to match the super layer they were created from.
 
