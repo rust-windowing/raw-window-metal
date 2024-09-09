@@ -247,7 +247,7 @@ impl Layer {
     /// let layer = unsafe { CAMetalLayer::new() };
     /// let ptr: NonNull<CAMetalLayer> = NonNull::from(&*layer);
     ///
-    /// let layer = unsafe { Layer::from_layer(ptr.cast()) };
+    /// let layer = unsafe { Layer::from_ca_layer(ptr.cast()) };
     /// assert!(layer.pre_existing());
     /// ```
     ///
@@ -261,10 +261,10 @@ impl Layer {
     /// let layer = CALayer::new();
     /// let ptr: NonNull<CALayer> = NonNull::from(&*layer);
     ///
-    /// let layer = unsafe { Layer::from_layer(ptr.cast()) };
+    /// let layer = unsafe { Layer::from_ca_layer(ptr.cast()) };
     /// assert!(!layer.pre_existing());
     /// ```
-    pub unsafe fn from_layer(layer_ptr: NonNull<c_void>) -> Self {
+    pub unsafe fn from_ca_layer(layer_ptr: NonNull<c_void>) -> Self {
         // SAFETY: Caller ensures that the pointer is a valid `CALayer`.
         let root_layer: &CALayer = unsafe { layer_ptr.cast().as_ref() };
 
