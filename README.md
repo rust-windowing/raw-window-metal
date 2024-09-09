@@ -24,12 +24,12 @@
 
 Interoperability library for Metal and [`raw-window-handle`](https://github.com/rust-windowing/raw-window-handle) for surface creation.
 
-```toml
-raw-window-metal = "0.4"
-```
-
 `CAMetalLayer` is the common entrypoint for graphics APIs (e.g `gfx` or `MoltenVK`), but the handles provided by window libraries may not include such a layer.
 This library may extract either this layer or allocate a new one.
+
+```console
+cargo add raw-window-metal
+```
 
 ## License
 
