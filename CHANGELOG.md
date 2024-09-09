@@ -3,6 +3,11 @@
 - Make `Layer`'s implementation details private; it is now a struct with `as_ptr` and `is_existing` accessor methods.
 - Add support for tvOS, watchOS and visionOS.
 - Use `objc2` internally.
+- Move `Layer` constructors to the type itself.
+  - `appkit::metal_layer_from_ns_view` is now `Layer::from_ns_view`.
+  - `uikit::metal_layer_from_ui_view` is now `Layer::from_ui_view`.
+- Added `Layer::from_layer` to construct a `Layer` from a `CALayer` directly.
+- Fixed layers not automatically resizing to match the super layer they were created from.
 
 # 0.4.0 (2023-10-31)
 - Update `raw-window-handle` dep to `0.6.0`.

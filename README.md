@@ -31,8 +31,6 @@ raw-window-metal = "0.4"
 `CAMetalLayer` is the common entrypoint for graphics APIs (e.g `gfx` or `MoltenVK`), but the handles provided by window libraries may not include such a layer.
 This library may extract either this layer or allocate a new one.
 
-Code is mostly extracted from the `gfx-backend-metal` crate.
-
 ## License
 
 Licensed under either of
