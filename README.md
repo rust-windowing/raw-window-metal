@@ -31,6 +31,8 @@ This library may extract either this layer or allocate a new one.
 cargo add raw-window-metal
 ```
 
+See [the docs](https://docs.rs/raw-window-metal) for examples and further information.
+
 ## License
 
 Licensed under either of
