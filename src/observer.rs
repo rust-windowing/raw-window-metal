@@ -15,6 +15,9 @@ declare_class!(
     ///
     /// We do this by subclassing, to allow the user to just store the layer as
     /// `Retained<CAMetalLayer>`, and still have our observers work.
+    ///
+    /// See the documentation on Key-Value Observing for details on how this works in general:
+    /// <https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/KeyValueObserving/KeyValueObserving.html>
     pub(crate) struct ObserverLayer;
 
     // SAFETY:
