@@ -8,7 +8,7 @@ documentation = "https://docs.rs/raw-window-metal"
 repository = "https://github.com/rust-windowing/raw-window-metal"
 readme = "README.md"
 keywords = ["window", "metal", "graphics"]
-categories = ["game-engines", "graphics"]
+categories = ["game-engines", "graphics", "os::macos-apis"]
 exclude = [".github/*"]
 
 [features]
