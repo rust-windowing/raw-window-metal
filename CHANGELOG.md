@@ -1,4 +1,7 @@
 # Unreleased
+
+# 1.0.0 (2024-09-09)
+
 - Bump Rust Edition from 2018 to 2021.
 - Make `Layer`'s implementation details private; it is now a struct with `as_ptr`, `into_raw` and `is_existing` accessor methods.
 - Add support for tvOS, watchOS and visionOS.

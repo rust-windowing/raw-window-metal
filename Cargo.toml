@@ -1,7 +1,7 @@
 [package]
 name = "raw-window-metal"
 # Remember to update html_root_url in lib.rs
-version = "0.4.0"
+version = "1.0.0"
 license = "MIT OR Apache-2.0"
 edition = "2021"
 description = "Interop library between Metal and raw-window-handle"
