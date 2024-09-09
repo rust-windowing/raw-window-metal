@@ -371,7 +371,7 @@ impl Layer {
         }
 
         // Force the view to become layer backed
-        // SAFETY: The signature of `NSView::setWantsLayer` is correctly specified, and
+        // SAFETY: The signature of `NSView::setWantsLayer` is correctly specified.
         let _: () = unsafe { msg_send![ns_view, setWantsLayer: true] };
 
         // SAFETY: `-[NSView layer]` returns an optional `CALayer`
