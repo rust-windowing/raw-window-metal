@@ -131,6 +131,8 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg, doc_cfg_hide), doc(cfg_hide(doc)))]
 #![deny(unsafe_op_in_unsafe_fn)]
 #![warn(clippy::undocumented_unsafe_blocks)]
+// Update in Cargo.toml as well.
+#![doc(html_root_url = "https://docs.rs/raw-window-metal/1.0.0")]
 
 mod observer;
 

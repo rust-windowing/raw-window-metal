@@ -1,4 +1,7 @@
 # Unreleased
+
+# 1.0.0 (2024-09-09)
+
 - Bump Rust Edition from 2018 to 2021.
 - Make `Layer`'s implementation details private; it is now a struct with `as_ptr`, `into_raw` and `is_existing` accessor methods.
 - Add support for tvOS, watchOS and visionOS.
@@ -6,6 +9,9 @@
 - Move `Layer` constructors to the type itself.
   - `appkit::metal_layer_from_ns_view` is now `Layer::from_ns_view`.
   - `uikit::metal_layer_from_ui_view` is now `Layer::from_ui_view`.
+
+  `raw-window-handle` types are also no longer exposed directly in the API.
+  This allows us to decouple the library from `raw-window-handle`'s versioning.
 - Added `Layer::from_layer` to construct a `Layer` from a `CALayer` directly.
 - Fixed layers not automatically resizing to match the super layer they were created from.
 
