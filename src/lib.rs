@@ -3,6 +3,8 @@
 //! Helpers for constructing a [`CAMetalLayer`] from a handle given by [`raw-window-handle`]. See
 //! the [`Layer`] type for the full API.
 //!
+//! [`raw-window-handle`]: https://crates.io/crates/raw-window-handle
+//!
 //!
 //! ## Example
 //!
@@ -40,7 +42,6 @@
 //! // Use `CAMetalLayer` here.
 //! ```
 //!
-//! [`raw-window-handle`]: https://crates.io/crates/raw-window-handle
 //! [`HasWindowHandle`]: https://docs.rs/raw-window-handle/0.6.2/raw_window_handle/trait.HasWindowHandle.html
 //!
 //!
@@ -84,7 +85,7 @@
 //!    a. Consumers of `raw-window-metal` like Wgpu and Ash in their API design choosing not to
 //!       register a callback with `-[CALayerDelegate displayLayer:]`, but instead leaves it up to
 //!       the user to figure out when to redraw. That is, they rely on other libraries' callbacks
-//!       telling us when to render.
+//!       telling them when to render.
 //!
 //!       (If you were to make an API only for Metal, you would probably make the user provide a
 //!       `render` closure that'd be called in the right situations).
