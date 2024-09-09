@@ -1,8 +1,7 @@
 //! # Interop between Metal and [`raw-window-handle`]
 //!
-//! Helpers for constructing a [`CAMetalLayer`] from a handle given by [`raw-window-handle`].
-//!
-//! See the [`Layer`] type for details.
+//! Helpers for constructing a [`CAMetalLayer`] from a handle given by [`raw-window-handle`]. See
+//! the [`Layer`] type for the full API.
 //!
 //!
 //! ## Example
@@ -43,6 +42,24 @@
 //!
 //! [`raw-window-handle`]: https://crates.io/crates/raw-window-handle
 //! [`HasWindowHandle`]: https://docs.rs/raw-window-handle/0.6.2/raw_window_handle/trait.HasWindowHandle.html
+//!
+//!
+//! ## Semantics
+//!
+//! As the user of this crate, you are likely creating a library yourself, and need to interface
+//! with a layer provided by a windowing library like Winit or SDL.
+//!
+//! In that sense, when the user hands your library a view or a layer via. `raw-window-handle`, they
+//! likely expect you to render into it. You should freely do that, but you should refrain from
+//! doing things like resizing the layer by changing its `bounds`, changing its `contentsGravity`,
+//! `opacity`, and similar such properties; semantically, these are things that are "outside" of
+//! your library's control, and interferes with the platforms normal handling of such things (i.e.
+//! the user creating a `MTKView`, and placing it inside a `NSStackView`. In such cases, you should
+//! not change the bounds of the view, as that will be done automatically at a "higher" level).
+//!
+//! Properties specific to `CAMetalLayer` like `drawableSize`, `colorspace` and so on probably _are_
+//! fine to change, because these are properties that the user _expects_ your library to change when
+//! they've given it to you (and they won't be changed by e.g. the layer being inside a stack view).
 //!
 //!
 //! ## Reasoning behind creating a sublayer
@@ -96,6 +113,15 @@
 //!    we don't need.
 //!
 //! Option 3 seems like the most robust solution, so this is what this crate does.
+//!
+//! Now we have another problem though: The `bounds` and `contentsScale` of sublayers are not
+//! automatically updated from the super layer.
+//!
+//! We could again choose to let that be up to the user of our crate, but that would be very
+//! cumbersome. Instead, this crate registers the necessary observers to make the sublayer track the
+//! size and scale factor of its super layer automatically. This makes it extra important that you
+//! do not modify common `CALayer` properties of the layer that `raw-window-metal` creates, since
+//! they may just end up being overwritten (see also "Semantics" above).
 
 #![cfg(target_vendor = "apple")]
 #![cfg_attr(docsrs, feature(doc_auto_cfg, doc_cfg_hide), doc(cfg_hide(doc)))]
