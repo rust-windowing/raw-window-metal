@@ -16,7 +16,7 @@
 //! use raw_window_handle::{RawWindowHandle, HasWindowHandle};
 //! use raw_window_metal::Layer;
 //! #
-//! # let mtm = objc2_foundation::MainThreadMarker::new().expect("doc tests to run on main thread");
+//! # let mtm = objc2::MainThreadMarker::new().expect("doc tests to run on main thread");
 //! #
 //! # #[cfg(target_os = "macos")]
 //! # let view = unsafe { objc2_app_kit::NSView::new(mtm) };
@@ -136,16 +136,18 @@
 
 mod observer;
 
-use crate::observer::ObserverLayer;
-use core::ffi::c_void;
+use core::ffi::{c_void, CStr};
 use core::hash;
 use core::panic::{RefUnwindSafe, UnwindSafe};
 use core::ptr::NonNull;
+
+use objc2::rc::Retained;
 use objc2::runtime::AnyClass;
-use objc2::{msg_send, rc::Retained};
-use objc2::{msg_send_id, ClassType};
-use objc2_foundation::{MainThreadMarker, NSObject, NSObjectProtocol};
+use objc2::{msg_send, ClassType, MainThreadMarker, Message};
+use objc2_foundation::{NSObject, NSObjectProtocol};
 use objc2_quartz_core::{CALayer, CAMetalLayer};
+
+use crate::observer::ObserverLayer;
 
 #[cfg(not(feature = "alloc"))]
 compile_error!("The `alloc` feature must currently be enabled.");
@@ -325,38 +327,32 @@ impl Layer {
             );
         }
 
-        // Check if the view's layer is already a `CAMetalLayer`.
-        if root_layer.is_kind_of::<CAMetalLayer>() {
-            let layer = root_layer.retain();
-            // SAFETY: Just checked that the layer is a `CAMetalLayer`.
-            let layer: Retained<CAMetalLayer> = unsafe { Retained::cast(layer) };
+        if let Some(layer) = root_layer.downcast_ref::<CAMetalLayer>() {
             Layer {
-                layer,
+                layer: layer.retain(),
                 pre_existing: true,
             }
         } else {
             let layer = ObserverLayer::new(root_layer);
             Layer {
-                layer: Retained::into_super(layer),
+                layer: layer.into_super(),
                 pre_existing: false,
             }
         }
     }
 
     fn from_retained_layer(root_layer: Retained<CALayer>) -> Self {
-        // Check if the view's layer is already a `CAMetalLayer`.
-        if root_layer.is_kind_of::<CAMetalLayer>() {
-            // SAFETY: Just checked that the layer is a `CAMetalLayer`.
-            let layer: Retained<CAMetalLayer> = unsafe { Retained::cast(root_layer) };
-            Layer {
+        match root_layer.downcast::<CAMetalLayer>() {
+            Ok(layer) => Layer {
                 layer,
                 pre_existing: true,
-            }
-        } else {
-            let layer = ObserverLayer::new(&root_layer);
-            Layer {
-                layer: Retained::into_super(layer),
-                pre_existing: false,
+            },
+            Err(root_layer) => {
+                let layer = ObserverLayer::new(&root_layer);
+                Layer {
+                    layer: layer.into_super(),
+                    pre_existing: false,
+                }
             }
         }
     }
@@ -391,7 +387,7 @@ impl Layer {
     /// use raw_window_metal::Layer;
     ///
     /// let handle: AppKitWindowHandle;
-    /// # let mtm = objc2_foundation::MainThreadMarker::new().expect("doc tests to run on main thread");
+    /// # let mtm = objc2::MainThreadMarker::new().expect("doc tests to run on main thread");
     /// # #[cfg(target_os = "macos")]
     /// # let view = unsafe { objc2_app_kit::NSView::new(mtm) };
     /// # #[cfg(target_os = "macos")]
@@ -415,7 +411,7 @@ impl Layer {
         if cfg!(debug_assertions) {
             // Load the class at runtime (instead of using `class!`)
             // to ensure that this still works if AppKit isn't linked.
-            let cls = AnyClass::get("NSView").unwrap();
+            let cls = AnyClass::get(CStr::from_bytes_with_nul(b"NSView\0").unwrap()).unwrap();
             assert!(ns_view.isKindOfClass(cls), "view was not a valid NSView");
         }
 
@@ -424,7 +420,7 @@ impl Layer {
         let _: () = unsafe { msg_send![ns_view, setWantsLayer: true] };
 
         // SAFETY: `-[NSView layer]` returns an optional `CALayer`
-        let root_layer: Option<Retained<CALayer>> = unsafe { msg_send_id![ns_view, layer] };
+        let root_layer: Option<Retained<CALayer>> = unsafe { msg_send![ns_view, layer] };
         let root_layer = root_layer.expect("failed making the view layer-backed");
 
         Self::from_retained_layer(root_layer)
@@ -475,12 +471,12 @@ impl Layer {
         if cfg!(debug_assertions) {
             // Load the class at runtime (instead of using `class!`)
             // to ensure that this still works if UIKit isn't linked.
-            let cls = AnyClass::get("UIView").unwrap();
+            let cls = AnyClass::get(CStr::from_bytes_with_nul(b"UIView\0").unwrap()).unwrap();
             assert!(ui_view.isKindOfClass(cls), "view was not a valid UIView");
         }
 
         // SAFETY: `-[UIView layer]` returns a non-optional `CALayer`
-        let root_layer: Retained<CALayer> = unsafe { msg_send_id![ui_view, layer] };
+        let root_layer: Retained<CALayer> = unsafe { msg_send![ui_view, layer] };
 
         // Unlike on macOS, we cannot replace the main view as `UIView` does
         // not allow it (when `NSView` does).

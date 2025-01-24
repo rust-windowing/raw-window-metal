@@ -11,6 +11,9 @@ readme = "README.md"
 keywords = ["window", "metal", "graphics"]
 categories = ["game-development", "graphics", "os::macos-apis"]
 exclude = [".github/*"]
+# Current, though not specified by policy, see:
+# https://github.com/rust-windowing/raw-window-metal/issues/26
+rust-version = "1.71"
 
 [features]
 default = ["std"]
@@ -18,8 +21,12 @@ std = ["alloc"]
 alloc = []
 
 [target.'cfg(target_vendor = "apple")'.dependencies]
-objc2 = "0.5.2"
-objc2-foundation = { version = "0.2.2", features = [
+objc2 = "0.6.0"
+objc2-core-foundation = { version = "0.3.0", default-features = false, features = [
+    "CFCGTypes",
+] }
+objc2-foundation = { version = "0.3.0", default-features = false, features = [
+    "objc2-core-foundation",
     "NSDictionary",
     "NSGeometry",
     "NSKeyValueObserving",
@@ -28,20 +35,27 @@ objc2-foundation = { version = "0.2.2", features = [
     "NSThread",
     "NSValue",
 ] }
-objc2-quartz-core = { version = "0.2.2", features = [
+objc2-quartz-core = { version = "0.3.0", default-features = false, features = [
+    "objc2-metal",
+    "objc2-core-foundation",
     "CALayer",
     "CAMetalLayer",
-    "objc2-metal",
 ] }
 
 [dev-dependencies]
 raw-window-handle = "0.6.0"
 
 [target.'cfg(target_os = "macos")'.dev-dependencies]
-objc2-app-kit = { version = "0.2.2", features = ["NSResponder", "NSView"] }
+objc2-app-kit = { version = "0.3.0", default-features = false, features = [
+    "NSResponder",
+    "NSView",
+] }
 
 [target.'cfg(all(target_vendor = "apple", not(target_os = "macos")))'.dev-dependencies]
-objc2-ui-kit = { version = "0.2.2", features = ["UIResponder", "UIView"] }
+objc2-ui-kit = { version = "0.3.0", default-features = false, features = [
+    "UIResponder",
+    "UIView",
+] }
 
 [package.metadata.docs.rs]
 targets = [
