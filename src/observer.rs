@@ -1,7 +1,7 @@
 use core::ffi::c_void;
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyClass, AnyObject};
-use objc2::{declare_class, msg_send, msg_send_id, mutability, ClassType, DeclaredClass};
+use objc2::{define_class, msg_send, AllocAnyThread, ClassType, DefinedClass};
 use objc2_foundation::{
     ns_string, NSDictionary, NSKeyValueChangeKey, NSKeyValueChangeNewKey,
     NSKeyValueObservingOptions, NSNumber, NSObjectNSKeyValueObserverRegistration, NSString,
@@ -9,7 +9,7 @@ use objc2_foundation::{
 };
 use objc2_quartz_core::{CALayer, CAMetalLayer};
 
-declare_class!(
+define_class!(
     /// A `CAMetalLayer` layer that will automatically update its bounds and scale factor to match
     /// its super layer.
     ///
@@ -18,29 +18,22 @@ declare_class!(
     ///
     /// See the documentation on Key-Value Observing for details on how this works in general:
     /// <https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/KeyValueObserving/KeyValueObserving.html>
-    pub(crate) struct ObserverLayer;
-
+    //
     // SAFETY:
     // - The superclass CAMetalLayer does not have any subclassing requirements.
-    // - Interior mutability is a safe default.
     // - CustomLayer implements `Drop` and ensures that:
     //   - It does not call an overridden method.
     //   - It does not `retain` itself.
-    unsafe impl ClassType for ObserverLayer {
-        type Super = CAMetalLayer;
-        type Mutability = mutability::InteriorMutable;
-        const NAME: &'static str = "RawWindowMetalLayer";
-    }
-
-    impl DeclaredClass for ObserverLayer {
-        type Ivars = Weak<CALayer>;
-    }
+    #[unsafe(super(CAMetalLayer))]
+    #[name = "RawWindowMetalLayer"]
+    #[ivars = Weak<CALayer>]
+    pub(crate) struct ObserverLayer;
 
     // `NSKeyValueObserving` category.
     //
     // SAFETY: The method is correctly defined.
-    unsafe impl ObserverLayer {
-        #[method(observeValueForKeyPath:ofObject:change:context:)]
+    impl ObserverLayer {
+        #[unsafe(method(observeValueForKeyPath:ofObject:change:context:))]
         fn _observe_value(
             &self,
             key_path: Option<&NSString>,
@@ -82,7 +75,7 @@ impl ObserverLayer {
     pub fn new(root_layer: &CALayer) -> Retained<Self> {
         let this = Self::alloc().set_ivars(Weak::new(root_layer));
         // SAFETY: Initializing `CAMetalLayer` is safe.
-        let this: Retained<Self> = unsafe { msg_send_id![super(this), init] };
+        let this: Retained<Self> = unsafe { msg_send![super(this), init] };
 
         // Add the layer as a sublayer of the root layer.
         root_layer.addSublayer(&this);
@@ -115,15 +108,13 @@ impl ObserverLayer {
             root_layer.addObserver_forKeyPath_options_context(
                 &this,
                 ns_string!("contentsScale"),
-                NSKeyValueObservingOptions::NSKeyValueObservingOptionNew
-                    | NSKeyValueObservingOptions::NSKeyValueObservingOptionInitial,
+                NSKeyValueObservingOptions::New | NSKeyValueObservingOptions::Initial,
                 ObserverLayer::context(),
             );
             root_layer.addObserver_forKeyPath_options_context(
                 &this,
                 ns_string!("bounds"),
-                NSKeyValueObservingOptions::NSKeyValueObservingOptionNew
-                    | NSKeyValueObservingOptions::NSKeyValueObservingOptionInitial,
+                NSKeyValueObservingOptions::New | NSKeyValueObservingOptions::Initial,
                 ObserverLayer::context(),
             );
         }
@@ -167,7 +158,7 @@ impl ObserverLayer {
         // SAFETY: The static is declared with the correct type in `objc2`.
         let key = unsafe { NSKeyValueChangeNewKey };
         let new = change
-            .get(key)
+            .objectForKey(key)
             .expect("requested change dictionary did not contain `NSKeyValueChangeNewKey`");
 
         // NOTE: Setting these values usually causes a quarter second animation to occur, which is
@@ -177,16 +168,16 @@ impl ObserverLayer {
         // ongoing, and as such we don't need to wrap this in a `CATransaction` ourselves.
 
         if key_path == Some(ns_string!("contentsScale")) {
-            // SAFETY: `contentsScale` is a CGFloat, and so the observed value is always a NSNumber.
-            let new = unsafe { &*(new as *const AnyObject as *const NSNumber) };
+            // `contentsScale` is a CGFloat, and so the observed value is always a NSNumber.
+            let new = new.downcast::<NSNumber>().unwrap();
             let scale_factor = new.as_cgfloat();
 
             // Set the scale factor of the layer to match the root layer when it changes (e.g. if
             // moved to a different monitor, or monitor settings changed).
             self.setContentsScale(scale_factor);
         } else if key_path == Some(ns_string!("bounds")) {
-            // SAFETY: `bounds` is a CGRect, and so the observed value is always a NSValue.
-            let new = unsafe { &*(new as *const AnyObject as *const NSValue) };
+            // `bounds` is a CGRect, and so the observed value is always a NSNumber.
+            let new = new.downcast::<NSValue>().unwrap();
             let bounds = new.get_rect().expect("new bounds value was not CGRect");
 
             // Set `bounds` and `position` so that the new layer is inside the superlayer.
@@ -202,7 +193,7 @@ impl ObserverLayer {
 
 #[cfg(test)]
 mod tests {
-    use objc2_foundation::{CGPoint, CGRect, CGSize};
+    use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 
     use super::*;
 

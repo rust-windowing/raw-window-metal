@@ -1,5 +1,8 @@
 # Unreleased
 
+- Update `objc2` dep to `0.6`.
+- Bump MSRV to 1.71.
+
 # 1.0.0 (2024-09-09)
 
 - Bump Rust Edition from 2018 to 2021.
