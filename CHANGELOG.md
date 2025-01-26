@@ -1,5 +1,7 @@
 # Unreleased
 
+# 1.1.0 (2025-01-24)
+
 - Update `objc2` dep to `0.6`.
 - Bump MSRV to 1.71.
 
