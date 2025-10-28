@@ -84,7 +84,7 @@
 //!
 //!    It has some problems though, due to:
 //!
-//!    a. Consumers of `raw-window-metal` like Wgpu and Ash in their API design choosing not to
+//!    1. Consumers of `raw-window-metal` like Wgpu and Ash in their API design choosing not to
 //!       register a callback with `-[CALayerDelegate displayLayer:]`, but instead leaves it up to
 //!       the user to figure out when to redraw. That is, they rely on other libraries' callbacks
 //!       telling them when to render.
@@ -92,7 +92,7 @@
 //!       (If you were to make an API only for Metal, you would probably make the user provide a
 //!       `render` closure that'd be called in the right situations).
 //!
-//!    b. Overwriting the `layer` on `NSView` makes the view "layer-hosting", see [wantsLayer],
+//!    2. Overwriting the `layer` on `NSView` makes the view "layer-hosting", see [wantsLayer],
 //!       which disables drawing functionality on the view like `drawRect:`/`updateLayer`.
 //!
 //!    These two in combination makes it basically impossible for crates like Winit to provide a
