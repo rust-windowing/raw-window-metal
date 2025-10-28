@@ -4,27 +4,15 @@ on: [push, pull_request]
 
 jobs:
   build:
-    name: Build - IOS
-    runs-on: macOS-latest
-    strategy:
-      matrix:
-        target:
-          - aarch64-apple-ios
+    name: iOS
+    runs-on: macos-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+    - uses: actions/checkout@v5
+    - uses: Swatinem/rust-cache@v2
 
-    - name: Install stable
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        target: ${{ matrix.target }}
-        override: true
+    - name: Install target
+      run: rustup target add aarch64-apple-ios
 
-    - name: Check
-      uses: actions-rs/cargo@v1
-      with:
-        use-cross: true
-        command: check
-        args: --target=${{ matrix.target }}
+    - name: Build
+      run: cargo build --target aarch64-apple-ios
