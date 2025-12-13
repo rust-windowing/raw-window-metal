@@ -128,7 +128,7 @@
 
 #![no_std]
 #![cfg(target_vendor = "apple")]
-#![cfg_attr(docsrs, feature(doc_auto_cfg, doc_cfg_hide), doc(cfg_hide(doc)))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(unsafe_op_in_unsafe_fn)]
 #![warn(clippy::undocumented_unsafe_blocks)]
 // Update in Cargo.toml as well.
