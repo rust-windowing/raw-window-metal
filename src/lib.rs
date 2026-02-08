@@ -36,12 +36,19 @@
 //!     RawWindowHandle::UiKit(handle) => unsafe { Layer::from_ui_view(handle.ui_view) },
 //!     _ => panic!("unsupported handle"),
 //! };
+//! let should_remove_from_superlayer = !layer.pre_existing();
 //! let layer: *mut CAMetalLayer = layer.into_raw().as_ptr().cast();
 //! // SAFETY: The pointer is a valid `CAMetalLayer`, and because we consumed `Layer` with
 //! // `into_raw`, the pointer has +1 retain count.
 //! let layer = unsafe { Retained::from_raw(layer).unwrap() };
 //!
 //! // Use `CAMetalLayer` here.
+//!
+//! // Later on (probably in `Drop`), remove the layer from the
+//! // superlayer to avoid keeping unnecessary layers around.
+//! if should_remove_from_superlayer {
+//!     layer.removeFromSuperlayer();
+//! }
 //! ```
 //!
 //! [`HasWindowHandle`]: https://docs.rs/raw-window-handle/0.6.2/raw_window_handle/trait.HasWindowHandle.html
@@ -266,7 +273,10 @@ impl Layer {
     /// This may be useful if you want to override some part of `raw-window-metal`'s behaviour, and
     /// need to do so based on whether it ended up creating a layer or not.
     ///
-    /// You should try to avoid this, and instead:
+    /// In particular, it is useful to allow knowing when you need to remove the layer from the
+    /// superlayer once you're done using it.
+    ///
+    /// Apart from that, you should try to avoid accessing this property, and instead:
     /// - Modify `CALayer` properties on the layer that you created this from.
     /// - Modify `CAMetalLayer` properties on the layer returned from `as_ptr`.
     #[inline]
@@ -481,5 +491,49 @@ impl Layer {
         // Unlike on macOS, we cannot replace the main view as `UIView` does
         // not allow it (when `NSView` does).
         Self::from_retained_layer(root_layer)
+    }
+
+    /// Remove the layer from the superlayer if it was one we created.
+    ///
+    /// This is a helper for doing:
+    ///
+    /// ```no_run
+    /// use objc2_quartz_core::CAMetalLayer;
+    /// use raw_window_metal::Layer;
+    ///
+    /// let layer: Layer;
+    /// # layer = unimplemented!();
+    ///
+    /// let should_remove_from_superlayer = !layer.pre_existing();
+    /// if should_remove_from_superlayer {
+    ///     // SAFETY: The pointer is a valid `CAMetalLayer`.
+    ///     let layer: &CAMetalLayer = unsafe { layer.as_ptr().cast().as_ref() };
+    ///     layer.removeFromSuperlayer();
+    /// }
+    /// ```
+    ///
+    /// Ideally, we should've done this in `Drop` on [`Layer`], but unfortunately, that wasn't
+    /// considered when this library was designed, and it would be a breaking change to do now, so
+    /// this will have to be done by the user of the library.
+    ///
+    /// # Examples
+    ///
+    /// Remove a layer we created from the superlayer inside `Drop` of your `Surface` type.
+    ///
+    /// ```
+    /// struct Surface {
+    ///     layer: raw_window_metal::Layer,
+    /// }
+    ///
+    /// impl Surface {
+    ///     fn drop(&mut self) {
+    ///         self.layer.remove_from_superlayer_if_necessary();
+    ///     }
+    /// }
+    /// ```
+    pub fn remove_from_superlayer_if_necessary(&self) {
+        if !self.pre_existing {
+            self.layer.removeFromSuperlayer();
+        }
     }
 }
