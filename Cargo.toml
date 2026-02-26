@@ -21,11 +21,11 @@ std = ["alloc"]
 alloc = []
 
 [target.'cfg(target_vendor = "apple")'.dependencies]
-objc2 = "0.6.0"
-objc2-core-foundation = { version = "0.3.0", default-features = false, features = [
+objc2 = "0.6.4"
+objc2-core-foundation = { version = "0.3.2", default-features = false, features = [
     "CFCGTypes",
 ] }
-objc2-foundation = { version = "0.3.0", default-features = false, features = [
+objc2-foundation = { version = "0.3.2", default-features = false, features = [
     "objc2-core-foundation",
     "NSDictionary",
     "NSGeometry",
@@ -35,7 +35,7 @@ objc2-foundation = { version = "0.3.0", default-features = false, features = [
     "NSThread",
     "NSValue",
 ] }
-objc2-quartz-core = { version = "0.3.0", default-features = false, features = [
+objc2-quartz-core = { version = "0.3.2", default-features = false, features = [
     "objc2-metal",
     "objc2-core-foundation",
     "CALayer",
@@ -46,13 +46,13 @@ objc2-quartz-core = { version = "0.3.0", default-features = false, features = [
 raw-window-handle = "0.6.0"
 
 [target.'cfg(target_os = "macos")'.dev-dependencies]
-objc2-app-kit = { version = "0.3.0", default-features = false, features = [
+objc2-app-kit = { version = "0.3.2", default-features = false, features = [
     "NSResponder",
     "NSView",
 ] }
 
 [target.'cfg(all(target_vendor = "apple", not(target_os = "macos")))'.dev-dependencies]
-objc2-ui-kit = { version = "0.3.0", default-features = false, features = [
+objc2-ui-kit = { version = "0.3.2", default-features = false, features = [
     "UIResponder",
     "UIView",
 ] }
