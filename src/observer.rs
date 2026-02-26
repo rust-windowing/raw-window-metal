@@ -25,7 +25,6 @@ define_class!(
     //   - It does not call an overridden method.
     //   - It does not `retain` itself.
     #[unsafe(super(CAMetalLayer))]
-    #[name = "RawWindowMetalLayer"]
     #[ivars = Weak<CALayer>]
     pub(crate) struct ObserverLayer;
 
